@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Security.Claims;
 using VozDoPovo.Data;
 using VozDoPovo.Models;
-using System.Security.Principal;
 
 namespace VozDoPovo.Controllers
 {
@@ -18,10 +18,31 @@ namespace VozDoPovo.Controllers
             _bancoContext = bancoContext;
         }
 
-        public PerfilModel? AcharPerfil(int id)
+        private async Task PreencherMetadadosDenunciasAsync(List<DenunciaModel> denuncias)
         {
-            PerfilModel? perfil = _bancoContext.Perfis.Where(x => x.id == id).FirstOrDefault();
-            return perfil;
+            if (denuncias.Count == 0)
+                return;
+
+            var idsPosts = denuncias.Select(d => d.id).ToList();
+            var idsPerfis = denuncias.Select(d => d.perfil).Distinct().ToList();
+
+            var contagemComentarios = await _bancoContext.Comentarios
+                .Where(c => idsPosts.Contains(c.idPost))
+                .GroupBy(c => c.idPost)
+                .Select(g => new { IdPost = g.Key, Total = g.Count() })
+                .ToDictionaryAsync(x => x.IdPost, x => x.Total);
+
+            var nomesPerfis = await _bancoContext.Perfis
+                .Where(p => idsPerfis.Contains(p.id))
+                .ToDictionaryAsync(p => p.id, p => p.nome);
+
+            foreach (var denuncia in denuncias)
+            {
+                denuncia.comments = contagemComentarios.TryGetValue(denuncia.id, out int total) ? total : 0;
+                denuncia.nome = nomesPerfis.TryGetValue(denuncia.perfil, out string? nomeAutor) && !string.IsNullOrWhiteSpace(nomeAutor)
+                    ? nomeAutor
+                    : "Cidadão";
+            }
         }
 
         public IActionResult Index()
@@ -35,18 +56,24 @@ namespace VozDoPovo.Controllers
             if (!ModelState.IsValid)
                 return RedirectToAction("Index", "Home");
 
-            PerfilModel? perfil = _bancoContext.Perfis.Where(x => x.nome.ToLower() == formulario.nome.ToLower()).FirstOrDefault();
+            string nomeBusca = formulario.nome.Trim().ToLower();
+            PerfilModel? perfil = await _bancoContext.Perfis
+                .FirstOrDefaultAsync(x => x.nome.ToLower() == nomeBusca);
 
             if (perfil is null)
             {
-                TempData["a"] = "Nome de perfil não existe";
+                TempData[MeusIDs.Sucesso] = "Nome de perfil não encontrado.";
                 return RedirectToAction("Index", "Home");
             }
-            else if (formulario.senha != perfil.senha)
+
+            if (formulario.senha != perfil.senha)
             {
-                TempData["a"] = "Senha incorreta";
+                TempData[MeusIDs.Sucesso] = "Senha incorreta.";
                 return RedirectToAction("Index", "Home");
             }
+
+            perfil.ultimoLogin = DateTime.Now;
+            await _bancoContext.SaveChangesAsync();
 
             var claims = new List<Claim>
             {
@@ -61,37 +88,21 @@ namespace VozDoPovo.Controllers
             var authProperties = new AuthenticationProperties
             {
                 AllowRefresh = true,
-                // Refreshing the authentication session should be allowed.
-
-                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(10),
-                // The time at which the authentication ticket expires. A 
-                // value set here overrides the ExpireTimeSpan option of 
-                // CookieAuthenticationOptions set with AddCookie.
-
-                IsPersistent = true,
-                // Whether the authentication session is persisted across 
-                // multiple requests. When used with cookies, controls
-                // whether the cookie's lifetime is absolute (matching the
-                // lifetime of the authentication ticket) or session-based.
-
-                //IssuedUtc = <DateTimeOffset>,
-                // The time at which the authentication ticket was issued.
-
-                //RedirectUri = <string>
-                // The full path or absolute URI to be used as an http 
-                // redirect response value.
+                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30),
+                IsPersistent = true
             };
 
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity), authProperties);
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(claimsIdentity),
+                authProperties);
 
             return RedirectToAction("Reddit", "Home");
         }
 
         public async Task<IActionResult> Logout()
         {
-            await HttpContext.SignOutAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme);
-
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Index", "Home");
         }
 
@@ -99,54 +110,86 @@ namespace VozDoPovo.Controllers
         {
             return View();
         }
+
         [HttpPost]
         public async Task<IActionResult> CriarPerfil(PerfilModel formulario)
         {
             if (!ModelState.IsValid)
-                return View();
+                return View(formulario);
 
-            if (_bancoContext.Perfis.Where(x => x.nome.ToLower()==formulario.nome.ToLower()).FirstOrDefault() != null )
+            string nomeBusca = formulario.nome.Trim().ToLower();
+            bool nomeJaExiste = await _bancoContext.Perfis
+                .AnyAsync(x => x.nome.ToLower() == nomeBusca);
+
+            if (nomeJaExiste)
             {
-                TempData["a"] = "Este nome já está sendo utilizado";
-                return RedirectToAction("CriarPerfil","Home");
+                TempData[MeusIDs.Sucesso] = "Este nome de usuário já está sendo utilizado.";
+                return RedirectToAction("CriarPerfil", "Home");
             }
 
+            formulario.nome = formulario.nome.Trim();
             formulario.cargo = IdCargos.Membro;
             formulario.ultimoLogin = DateTime.Now;
             formulario.criada = DateTime.Now;
 
             _bancoContext.Perfis.Add(formulario);
-            _bancoContext.SaveChanges();
+            await _bancoContext.SaveChangesAsync();
 
+            TempData[MeusIDs.Sucesso] = "Perfil criado com sucesso! Faça login para continuar.";
             return RedirectToAction("Index", "Home");
         }
 
         public async Task<IActionResult> Reddit()
         {
-            List<DenunciaModel> denuncias = _bancoContext.Denuncias.Where(x => !x.arquivada).ToList();
+            List<DenunciaModel> denuncias = await _bancoContext.Denuncias
+                .Where(x => !x.arquivada)
+                .OrderByDescending(x => x.id)
+                .ToListAsync();
 
-            foreach (DenunciaModel denuncia in denuncias)
-            {
-                denuncia.comments = _bancoContext.Comentarios.Where(x => x.idPost == denuncia.id).Count();
-                PerfilModel? perfil = _bancoContext.Perfis.Where(x => x.id == denuncia.perfil).FirstOrDefault();
-                if (perfil != null)
-                {
-                    denuncia.nome = perfil.nome;
-                }
-            }
-            ViewBag.teste = _bancoContext.Comentarios.FirstOrDefault();
+            await PreencherMetadadosDenunciasAsync(denuncias);
             return View(denuncias);
         }
 
         public async Task<IActionResult> Lixeira()
         {
-            List<DenunciaModel> denuncias = _bancoContext.Denuncias.Where(x => x.arquivada).ToList();
+            List<DenunciaModel> denuncias = await _bancoContext.Denuncias
+                .Where(x => x.arquivada)
+                .OrderByDescending(x => x.id)
+                .ToListAsync();
 
-            foreach (DenunciaModel denuncia in denuncias)
-            {
-                denuncia.comments = _bancoContext.Comentarios.Where(x => x.idPost == denuncia.id).Count();
-            }
+            await PreencherMetadadosDenunciasAsync(denuncias);
             return View(denuncias);
+        }
+
+        public async Task<IActionResult> MapaGeral()
+        {
+            List<DenunciaModel> denuncias = await _bancoContext.Denuncias
+                .Where(x => !x.arquivada)
+                .OrderByDescending(x => x.id)
+                .ToListAsync();
+
+            await PreencherMetadadosDenunciasAsync(denuncias);
+            return View(denuncias);
+        }
+
+        public async Task<IActionResult> MinhasDenuncias()
+        {
+            if (!User.EstaLogado())
+                return RedirectToAction("Index", "Home");
+
+            int idUsuario = User.ObterIdUsuario();
+            List<DenunciaModel> denuncias = await _bancoContext.Denuncias
+                .Where(x => x.perfil == idUsuario)
+                .OrderByDescending(x => x.id)
+                .ToListAsync();
+
+            await PreencherMetadadosDenunciasAsync(denuncias);
+            return View(denuncias);
+        }
+
+        public IActionResult LeitorPlaca()
+        {
+            return View();
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
@@ -154,6 +197,5 @@ namespace VozDoPovo.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
-
     }
 }

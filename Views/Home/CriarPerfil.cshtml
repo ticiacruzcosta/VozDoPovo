@@ -1,11 +1,8 @@
 ﻿@model PerfilModel
+@{
+    ViewData["Title"] = "Criar Novo Perfil";
+}
 
-<h3 class="mb-4">
-    <i class="fa-solid fa-cloud-arrow-up me-2" style="color:lightgreen"></i>
-    Criação de Perfil
-</h3>
-
-<form asp-action="CriarPerfil" method="post" enctype="multipart/form-data" class="text-lg-start">
-
+<form asp-action="CriarPerfil" method="post" enctype="multipart/form-data">
     <partial name="_FormularioPerfil" />
 </form>

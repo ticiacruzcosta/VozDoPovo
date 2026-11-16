@@ -1,0 +1,39 @@
+@using VozDoPovo.Data
+@model List<DenunciaModel>
+
+@{
+    ViewData["Title"] = "Minhas Denúncias";
+    int totalMinhas = Model?.Count ?? 0;
+    int totalApoios = Model?.Sum(x => (int)x.likes) ?? 0;
+}
+
+<div class="vp-banner d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-4">
+    <div style="max-width: 580px; position: relative; z-index: 2;">
+        <div class="vp-banner-pill">
+            <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+            </svg>
+            <span>PAINEL DO CIDADÃO</span>
+        </div>
+        <h2 class="mb-2" style="font-size: 1.6rem; font-weight: 800;">
+            Denúncias de @User.ObterNomeUsuario()
+        </h2>
+        <p class="mb-0" style="font-size: 0.88rem; opacity: 0.9;">
+            Gerencie, edite ou acompanhe os comentários das ocorrências que você registrou na plataforma.
+        </p>
+    </div>
+
+    <div class="d-flex align-items-center gap-3 flex-shrink-0" style="position: relative; z-index: 2;">
+        <div class="text-center px-4 py-2 rounded-4" style="background: rgba(255,255,255,0.15);">
+            <div style="font-size: 1.35rem; font-weight: 800;">@totalMinhas</div>
+            <div style="font-size: 0.72rem; opacity: 0.85;">Publicadas</div>
+        </div>
+        <div class="text-center px-4 py-2 rounded-4" style="background: rgba(255,255,255,0.15);">
+            <div style="font-size: 1.35rem; font-weight: 800;">@totalApoios</div>
+            <div style="font-size: 0.72rem; opacity: 0.85;">Apoios</div>
+        </div>
+    </div>
+</div>
+
+<partial name="_Homepage" />

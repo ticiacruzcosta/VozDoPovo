@@ -5,13 +5,14 @@ using VozDoPovo.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Culture configuration
-var cultureInfo = new CultureInfo("en-US");
+// Configuração de cultura padrão (pt-BR para datas e textos; coordenadas usam InvariantCulture)
+var cultureInfo = new CultureInfo("pt-BR");
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
 CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
-// Register services
+// Registro de serviços MVC e HttpClient
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpClient();
 
 builder.Services.AddDbContext<BancoContext>(options =>
 {
@@ -19,19 +20,18 @@ builder.Services.AddDbContext<BancoContext>(options =>
         builder.Configuration.GetConnectionString("DataBase"));
 });
 
-// Cookie Authentication
+// Autenticação via Cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.ExpireTimeSpan = TimeSpan.FromMinutes(20);
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
         options.SlidingExpiration = true;
-        options.AccessDeniedPath = "/Forbidden/";
+        options.LoginPath = "/Home/Index";
+        options.AccessDeniedPath = "/Home/Index";
     });
 
-// Build application
 var app = builder.Build();
 
-// Configure HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -39,16 +39,12 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
-
 app.UseRouting();
 
-// Authentication and authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
-// MVC Routing
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

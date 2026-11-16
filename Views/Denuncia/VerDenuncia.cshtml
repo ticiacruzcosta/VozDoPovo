@@ -1,56 +1,74 @@
 ﻿@model DenunciaModel
+@{
+    ViewData["Title"] = $"Denúncia #{Model.id}";
+}
 
-@* <link rel="stylesheet" href="~/css/Formulario.css" asp-append-version="true" /> *@
-@* <link rel="stylesheet" href="~/css/Denuncia.css" asp-append-version="true" /> *@
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <a asp-controller="Home" asp-action="Reddit" class="btn-vp-neutro">
+        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+        </svg>
+        <span>Voltar para o Mural</span>
+    </a>
 
-<h3 class="mb-4">
-    <i class="fa-solid fa-bookmark me-2" style="color:lightgreen"></i>
-    Denúncia #@Model.id
-</h3>
+    <span class="badge rounded-pill px-3 py-2" style="background: rgba(21, 153, 55, 0.14); color: var(--vp-green); font-size: 0.78rem;">
+        ● Visualizando Denúncia #@Model.id
+    </span>
+</div>
 
-<div class="main-content container ">
-    <partial name="_Postagem" />
+<partial name="_Postagem" />
 
-    <form asp-action="Comentar" method="post" enctype="multipart/form-data" class="text-lg-start mb-4">
+<!-- Seção de Comentários -->
+<div class="vp-card p-4 p-lg-5 mb-4">
+    <h4 class="fw-bold mb-3 d-flex align-items-center gap-2" style="font-size: 1.05rem;">
+        <svg class="vp-svg" style="color: var(--vp-blue);" viewBox="0 0 24 24">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        <span>Comentários da Comunidade (@(Model.comentarios?.Count ?? 0))</span>
+    </h4>
 
+    <form asp-action="Comentar" method="post" class="mb-4">
+        <input type="hidden" name="idPost" value="@Model.id" />
         <input type="hidden" asp-for="id" />
 
-        <span asp-validation-for="mensagem"
-              class="text-danger small"></span>
-
-        <label asp-for="mensagem" class="form-label">
-            <i class="fa-solid fa-comment me-2"></i>Comentários
-        </label>
-
-        <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
-            <textarea asp-for="mensagem"
+        <div class="d-flex flex-column flex-sm-row gap-2 align-items-stretch">
+            <textarea name="mensagem"
                       required
                       id="txtInput"
                       rows="2"
-                      contenteditable
-                      class="form-control dark-input"
-                      style="margin-right:1%"
-                      placeholder="Escreva um comentário">
-              </textarea>
+                      class="form-control campo-voz flex-grow-1"
+                      placeholder="Escreva um comentário ou atualização sobre esta ocorrência..."></textarea>
 
-            <button type="submit" class="btn btn-primary rounded-pill">
-                <i class="fa-solid fa-upload"></i>
+            <button type="submit" class="btn-vp-verde px-4 align-self-sm-end py-2">
+                <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+                <span>Publicar</span>
             </button>
-
         </div>
     </form>
 
-    @if (Model.comentarios != null)
+    @if (Model.comentarios != null && Model.comentarios.Any())
     {
-        @foreach (ComentarioModel comentario in Model.comentarios)
-        {
-            <div data-id="@Model.id" class="card denuncia-card shadow-lg mb-4 card-body">
-                @comentario.mensagem
-            </div>
-        }
+        <div class="d-flex flex-column gap-3">
+            @foreach (ComentarioModel comentario in Model.comentarios)
+            {
+                <div class="p-3 rounded-4" style="background: var(--vp-surface-alt); border: 1px solid var(--vp-border);">
+                    <div class="d-flex justify-content-between align-items-center mb-1" style="font-size: 0.76rem; color: var(--vp-text-muted);">
+                        <span class="fw-bold" style="color: var(--vp-blue);">Comentário #@comentario.id</span>
+                        <span>@comentario.data.ToString("dd/MM/yyyy 'às' HH:mm")</span>
+                    </div>
+                    <div style="font-size: 0.92rem; color: var(--vp-text-body); white-space: pre-line;">@comentario.mensagem</div>
+                </div>
+            }
+        </div>
     }
     else
     {
-        <div class="align-content-center">Não há comentários</div>
+        <div class="text-center py-4 rounded-4" style="background: var(--vp-surface-alt); color: var(--vp-text-muted); font-size: 0.88rem;">
+            Ainda não há comentários nesta denúncia. Seja o primeiro a comentar!
+        </div>
     }
 </div>

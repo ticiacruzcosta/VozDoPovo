@@ -1,11 +1,26 @@
 ﻿@model DenunciaModel
+@{
+    ViewData["Title"] = "Fazer Nova Denúncia";
+}
 
-<h3 class="mb-4">
-    <i class="fa-solid fa-cloud-arrow-up me-2" style="color:cornflowerblue"></i>
-    Fazer Denúncia
-</h3>
+<div class="vp-banner d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-4">
+    <div style="max-width: 620px; position: relative; z-index: 2;">
+        <div class="vp-banner-pill">
+            <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                <path d="m3 11 18-5v12L3 14v-3z" />
+                <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+            </svg>
+            <span>NOVO REGISTRO CIDADÃO</span>
+        </div>
+        <h2 class="mb-2" style="font-size: 1.6rem; font-weight: 800;">
+            Fazer Nova Denúncia
+        </h2>
+        <p class="mb-0" style="font-size: 0.88rem; opacity: 0.9;">
+            Relate o problema encontrado na sua rua ou bairro, anexe uma foto opcional e marque o ponto no mapa.
+        </p>
+    </div>
+</div>
 
-<form asp-action="CriarDenuncia" method="post" enctype="multipart/form-data" class="text-lg-start">
-
-    <partial name ="_Formulario"/>
+<form asp-action="CriarDenuncia" method="post" enctype="multipart/form-data">
+    <partial name="_Formulario" />
 </form>

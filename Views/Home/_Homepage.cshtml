@@ -2,60 +2,174 @@
 @using System.Text.Json
 @model List<DenunciaModel>
 
-<link rel="stylesheet" href="~/css/Denuncia.css" asp-append-version="true" />
-
 @{
-    bool lixeira = ViewContext.RouteData.Values["action"]?.ToString() == "Lixeira";
-    // ComentarioModel teste = ViewBag.teste;
+    int totalPosts = Model?.Count ?? 0;
 }
 
-@* Leitura de placas *@
-@* <div id="print"></div>
-
-<div class="card-body position-relative p-0 d-flex align-items-center justify-content-center">
-    <!-- Área da câmera -->
-    <div class="camera-frame">
-        <video id="cameraVideo" autoplay playsinline></video>
-
-        <canvas id="overlayCanvas"></canvas>
-
-        <canvas id="cameraCanvas" style="display:none;"></canvas>
-    </div>
-</div>
-
-<button id="enviar" class="btn btn-sm">Enviar</button>
-<script src="~/js/CameraPlaca.js" asp-append-version="true"></script> *@
-
-@* <img src="~/bennesby-animado.gif" width="332" height="264" /> *@
-
-<div class="main-content">
-    @* <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"> *@
-    @* <div role="alert" class="alert alert-success">
-        <button type="button" class="btn btn-danger btn-sm close-alert" arial-label="Close">X</button>
-        Bem vindo ao site!
-    </div> *@
-
-    @if (TempData[MeusIDs.Sucesso] != null)
+@if (TempData[MeusIDs.Sucesso] != null)
+{
+    string? rawTemp = TempData[MeusIDs.Sucesso]?.ToString();
+    JsonDenuncia? denuncia = null;
+    try
     {
-        JsonDenuncia? denuncia = JsonSerializer.Deserialize<JsonDenuncia?>(TempData[MeusIDs.Sucesso].ToString());
-        if (denuncia != null)
+        if (!string.IsNullOrWhiteSpace(rawTemp) && rawTemp.TrimStart().StartsWith("{"))
         {
-            <div role="alert" class="alert alert-success">
-                <button type="button" class="btn btn-danger btn-sm close-alert" arial-label="Close">X</button>
-                Denuncia #@denuncia.id adicionada!
-            </div>
+            denuncia = JsonSerializer.Deserialize<JsonDenuncia?>(rawTemp);
         }
     }
+    catch { }
 
-    <div class="container py-4">
+    if (denuncia != null)
+    {
+        <div role="alert" class="alert alert-success d-flex align-items-center justify-content-between rounded-4 shadow-sm mb-4">
+            <div class="d-flex align-items-center gap-2 fw-semibold">
+                <svg class="vp-svg" viewBox="0 0 24 24">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                <span>Denúncia #@denuncia.id salva com sucesso!</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-success close-alert px-3">Fechar</button>
+        </div>
+    }
+}
 
-        @if (Model != null && Model.Any())
-        {
-            @foreach (var denuncia in Model.OrderByDescending(x => x.id))
-            {
-                <partial name="_Postagem" model=denuncia />
-            }
-        }
+<!-- Sub-Abas Nível 1: Ordenação -->
+<div class="vp-card p-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div class="d-flex flex-wrap align-items-center gap-2" id="vp-sort-group">
+        <button type="button" onclick="ordenarFeedVoz('recentes', this)" class="vp-tab-pill active">
+            <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span>Mais Recentes</span>
+        </button>
+        <button type="button" onclick="ordenarFeedVoz('apoiadas', this)" class="vp-tab-pill">
+            <svg class="vp-svg-sm" style="color: var(--vp-green);" viewBox="0 0 24 24">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                <polyline points="17 6 23 6 23 12" />
+            </svg>
+            <span>Mais Apoiadas</span>
+        </button>
+        <button type="button" onclick="ordenarFeedVoz('comentadas', this)" class="vp-tab-pill">
+            <svg class="vp-svg-sm" style="color: var(--vp-blue);" viewBox="0 0 24 24">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>Mais Comentadas</span>
+        </button>
     </div>
 
+    <span id="vp-sort-status" style="font-size: 0.78rem; color: var(--vp-text-muted); font-weight: 600;">
+        @totalPosts @(totalPosts == 1 ? "ocorrência listada" : "ocorrências listadas")
+    </span>
 </div>
+
+<!-- Sub-Abas Nível 2: Os 4 Eixos da Logo Oficial -->
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4" id="vp-cat-group">
+    <button type="button" onclick="filtrarCatVoz('todas', this)" class="vp-cat-pill active">
+        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+            <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+            <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+        </svg>
+        <span>Todas (@totalPosts)</span>
+    </button>
+
+    <button type="button" onclick="filtrarCatVoz('vias', this)" class="vp-cat-pill">
+        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+            <ellipse cx="12" cy="14" rx="8" ry="4.5" />
+            <path d="M6 12.5l3 1.5 4-1 4 1.5" />
+        </svg>
+        <span>Buracos & Vias</span>
+    </button>
+
+    <button type="button" onclick="filtrarCatVoz('iluminacao', this)" class="vp-cat-pill">
+        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+            <path d="M9 21V8a4 4 0 0 1 4-4h4" />
+            <rect x="15" y="3" width="5" height="2.5" rx="1" />
+            <path d="M6 21h6" />
+        </svg>
+        <span>Iluminação</span>
+    </button>
+
+    <button type="button" onclick="filtrarCatVoz('agua', this)" class="vp-cat-pill">
+        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+            <path d="M7 6h6M10 6v4" />
+            <path d="M4 10h11a3 3 0 0 1 3 3v2h-3v-1a1 1 0 0 0-1-1H4v-3z" />
+            <path d="M16.5 18.5c0 1.2-1 2.2-1.5 2.2s-1.5-1-1.5-2.2c0-.8 1.5-2.5 1.5-2.5s1.5 1.7 1.5 2.5z" />
+        </svg>
+        <span>Água & Saneamento</span>
+    </button>
+
+    <button type="button" onclick="filtrarCatVoz('lixo', this)" class="vp-cat-pill">
+        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+            <path d="M9 4h6l-1.5 3h-3L9 4z" />
+            <path d="M7 11c0-2.5 2-4 5-4s5 1.5 5 4c1 2 1.5 5 1 7-.4 1.5-2 2-6 2s-5.6-.5-6-2c-.5-2 0-5 1-7z" />
+        </svg>
+        <span>Limpeza & Lixo</span>
+    </button>
+</div>
+
+<!-- Lista de Postagens -->
+<div id="vp-feed-container">
+    @if (Model != null && Model.Any())
+    {
+        @foreach (var denuncia in Model.OrderByDescending(x => x.id))
+        {
+            <partial name="_Postagem" model="denuncia" />
+        }
+    }
+    else
+    {
+        <div class="vp-card p-5 text-center">
+            <div class="mb-2" style="color: var(--vp-blue);">
+                <svg style="width: 42px; height: 42px; stroke: currentColor; stroke-width: 1.75; fill: none;" viewBox="0 0 24 24">
+                    <path d="m3 11 18-5v12L3 14v-3z" />
+                    <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+                </svg>
+            </div>
+            <h5 class="fw-bold">Nenhuma denúncia encontrada</h5>
+            <p class="mb-3" style="color: var(--vp-text-muted); font-size: 0.9rem;">
+                Ainda não há registros nesta seção. Seja o primeiro a colaborar com a nossa cidade!
+            </p>
+            <a asp-controller="Denuncia" asp-action="CriarDenuncia" class="btn-vp-verde">
+                Registrar Primeira Denúncia
+            </a>
+        </div>
+    }
+</div>
+
+<script>
+    function ordenarFeedVoz(criterio, btn) {
+        document.querySelectorAll('#vp-sort-group .vp-tab-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const container = document.getElementById('vp-feed-container');
+        if (!container) return;
+
+        const cards = Array.from(container.querySelectorAll('.vp-post-item'));
+        cards.sort((a, b) => {
+            if (criterio === 'apoiadas') {
+                return (parseInt(b.dataset.likes) || 0) - (parseInt(a.dataset.likes) || 0);
+            }
+            if (criterio === 'comentadas') {
+                return (parseInt(b.dataset.comments) || 0) - (parseInt(a.dataset.comments) || 0);
+            }
+            return (parseInt(b.dataset.id) || 0) - (parseInt(a.dataset.id) || 0);
+        });
+
+        cards.forEach(card => container.appendChild(card));
+    }
+
+    function filtrarCatVoz(cat, btn) {
+        document.querySelectorAll('#vp-cat-group .vp-cat-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        document.querySelectorAll('#vp-feed-container .vp-post-item').forEach(card => {
+            if (cat === 'todas' || card.dataset.cat === cat) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+</script>

@@ -1,178 +1,249 @@
-﻿@* @Html.AntiForgeryToken() *@
+﻿@using System.Globalization
 @model DenunciaModel
+
 @{
-    ViewData["Title"] = "Mapa Interativo";
+    bool editando = ViewContext.RouteData.Values["action"]?.ToString() == "EditarDenuncia";
 }
 
-<link rel="stylesheet" href="~/css/Formulario.css" asp-append-version="true" />
-
-<div class="container py-4 card denuncia-form border-0 shadow-lg  card-body p-4 p-lg-5">
-
-    <div class="mb-3">
-
-        <label asp-for="contexto" class="form-label">
-            Denúncia
-        </label>
-
-        <textarea asp-for="contexto"
-                  required
-                  rows="8"
-                  id="contexto"
-                  class="form-control dark-input mb-4"
-                  placeholder="Explique seu problema">
-              </textarea>
-
-        <span asp-validation-for="contexto" class="text-danger small"></span>
-
-        <div class="d-flex align-items-center border-bottom border-top pb-1 pt-1" style="float:left">
-
-            <input asp-for="anonimo" type="checkbox" name="anonimo" style="transform: scale(1.5); position: relative; top: -2px" />
-
-            <label asp-for="anonimo" class="px-2">Anônimo</label>
+<div class="vp-card p-4 p-lg-5">
+    <!-- Cabeçalho do Formulário com Sub-Abas Internas -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 border-bottom pb-3 mb-4">
+        <div>
+            <h3 class="fw-bold mb-1" style="font-size: 1.15rem;">
+                @(editando ? $"Dados da Denúncia #{Model.id}" : "Preencher Dados da Denúncia")
+            </h3>
+            <p class="mb-0" style="font-size: 0.82rem; color: var(--vp-text-muted);">
+                Navegue pelas 2 abas abaixo para descrever o problema e confirmar a localização no mapa.
+            </p>
         </div>
 
+        <div class="d-flex gap-2 p-1 rounded-pill" style="background: var(--vp-surface-alt); border: 1px solid var(--vp-border);">
+            <button type="button" id="vp-step-btn-1" onclick="alternarAbaFormularioDenuncia(1)" class="vp-tab-pill active border-0">
+                <span>1. Relato & Foto</span>
+            </button>
+            <button type="button" id="vp-step-btn-2" onclick="alternarAbaFormularioDenuncia(2)" class="vp-tab-pill border-0">
+                <span>2. Localização no Mapa</span>
+            </button>
+        </div>
     </div>
 
-
-    <div class="mb-3">
-
-        <label for="imagemInput" class="form-label">
-            Imagem (opcional)
-        </label>
-
-        <input asp-for="arquivoImg"
-               type="file"
-               accept="image/*"
-               id="imagemInput"
-               class="form-control dark-input" />
-
-        <div class="form-text text-secondary mt-2">
-            JPG, PNG ou WEBP
+    <!-- ABA 1: RELATO E EVIDÊNCIA FOTOGRÁFICA -->
+    <div id="vp-step-panel-1">
+        <div class="mb-4">
+            <label asp-for="contexto" class="form-label">
+                Descrição do Problema *
+            </label>
+            <textarea asp-for="contexto"
+                      required
+                      rows="6"
+                      id="contexto"
+                      class="form-control campo-voz"
+                      placeholder="Explique detalhadamente o problema observado (ex.: iluminação, buraco na via, vazamento de água, limpeza urbana)..."></textarea>
+            <span asp-validation-for="contexto" class="text-danger small"></span>
         </div>
 
-        <input type="hidden"
-               name="imagem"
-               value="@Model.imagem">
-
-    </div>
-
-    <div class="preview-container mb-4">
-
-        @if (Model.imagem != null)
-        {
-            <img id="preview"
-                 src="~/images/@Model.imagem"
-                 class="preview-image"
-                 alt="Pré-visualização da imagem" />
-        }
-        else
-        {
-            <img id="preview"
-                 class="preview-image d-none"
-                 alt="Pré-visualização da imagem" />
-        }
-
-    </div>
-
-    <div class="container mt-4">
-        @* MAPA *@
-        <h2>Selecionar localização</h2>
-
-        @if (TempData["Mensagem"] != null)
-        {
-            <div class="alert alert-success">
-                @TempData["Mensagem"]
+        <div class="row g-4 align-items-center mb-4">
+            <div class="col-md-6">
+                <label for="imagemInput" class="form-label">
+                    Imagem da Ocorrência (opcional — JPG, PNG ou WEBP)
+                </label>
+                <input asp-for="arquivoImg"
+                       type="file"
+                       accept="image/*"
+                       id="imagemInput"
+                       class="form-control campo-voz" />
+                <input type="hidden" name="imagem" value="@Model.imagem" />
             </div>
-        }
 
-        <p>
-            Clique no mapa para selecionar uma localização.
-            Você também pode arrastar o marcador.
-        </p>
+            <div class="col-md-6">
+                <label asp-for="anonimo" class="p-3 rounded-4 d-flex align-items-center justify-content-between w-100 m-0"
+                       style="background: var(--vp-surface-alt); border: 1px solid var(--vp-border); cursor: pointer;">
+                    <div>
+                        <div class="fw-bold" style="font-size: 0.9rem;">Publicar de Forma Anônima</div>
+                        <div style="font-size: 0.78rem; color: var(--vp-text-muted);">
+                            Ocultar meu nome de usuário no mural público
+                        </div>
+                    </div>
+                    <input asp-for="anonimo" type="checkbox" class="form-check-input m-0" style="width: 1.35rem; height: 1.35rem;" />
+                </label>
+            </div>
+        </div>
 
-        <a id="edit" type="hidden"></a>
+        <div class="preview-container mb-4">
+            @if (Model.imagem != null)
+            {
+                <img id="preview"
+                     src="~/images/@Model.imagem"
+                     class="preview-image"
+                     alt="Pré-visualização da imagem" />
+            }
+            else
+            {
+                <img id="preview"
+                     class="preview-image d-none"
+                     alt="Pré-visualização da imagem" />
+            }
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center border-top pt-3">
+            <a asp-controller="Home" asp-action="Reddit" class="btn-vp-neutro">
+                Cancelar
+            </a>
+            <button type="button" onclick="alternarAbaFormularioDenuncia(2)" class="btn-vp-azul">
+                <span>Próximo: Marcar no Mapa →</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ABA 2: MAPA INTERATIVO E COORDENADAS -->
+    <div id="vp-step-panel-2" style="display: none;">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div>
+                <h4 class="fw-bold mb-1" style="font-size: 1rem;">Selecionar Localização no Mapa</h4>
+                <p class="mb-0" style="font-size: 0.82rem; color: var(--vp-text-muted);">
+                    Clique no mapa, arraste o marcador ou use o botão de GPS automático.
+                </p>
+            </div>
+
+            <button type="button" onclick="usarMinhaLocalizacaoGps()" class="btn-vp-neutro">
+                <svg class="vp-svg-sm" style="color: var(--vp-blue);" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+                <span id="vp-gps-label">Usar minha localização atual (GPS)</span>
+            </button>
+        </div>
+
+        <div id="edit" class="d-none"></div>
         <partial name="_Mapa" />
 
-        <div class="row map-coordinates">
-            <a class="col-md-6">
-                <label asp-for="latitude" class="form-label">
-                    Latitude
-                </label>
-
-                <input asp-for="latitude" type="number"
+        <div class="row g-3 map-coordinates mb-4">
+            <div class="col-md-6">
+                <label asp-for="latitude" class="form-label">Latitude</label>
+                <input asp-for="latitude"
+                       type="number"
                        id="Latitude"
-                       step="any" />
+                       step="any"
+                       value="@Model.latitude.ToString(CultureInfo.InvariantCulture)"
+                       class="form-control campo-voz" />
+                <span asp-validation-for="latitude" class="text-danger small"></span>
+            </div>
 
-                <span asp-validation-for="latitude"
-                      class="text-danger"></span>
-            </a>
-
-            <a class="col-md-6">
-                <label asp-for="longitude" class="form-label">
-                    Longitude
-                </label>
-
-                <input asp-for="longitude" type="number"
+            <div class="col-md-6">
+                <label asp-for="longitude" class="form-label">Longitude</label>
+                <input asp-for="longitude"
+                       type="number"
                        id="Longitude"
-                       step="any" />
-
-                <span asp-validation-for="longitude"
-                      class="text-danger"></span>
-            </a>
+                       step="any"
+                       value="@Model.longitude.ToString(CultureInfo.InvariantCulture)"
+                       class="form-control campo-voz" />
+                <span asp-validation-for="longitude" class="text-danger small"></span>
+            </div>
         </div>
 
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-top pt-3">
+            <button type="button" onclick="alternarAbaFormularioDenuncia(1)" class="btn-vp-neutro">
+                ← Voltar ao Relato
+            </button>
+
+            <div class="d-flex align-items-center gap-2">
+                @if (editando && !Model.arquivada)
+                {
+                    <a asp-controller="Denuncia"
+                       asp-action="DeletarDenuncia"
+                       asp-route-id="@Model.id"
+                       class="vp-btn-dislike px-4 py-2">
+                        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        <span>Arquivar Denúncia</span>
+                    </a>
+                }
+
+                <button type="submit" class="btn-vp-verde px-5">
+                    <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    <span>@(Model.arquivada ? "Reabrir / Desarquivar" : "Salvar Denúncia")</span>
+                </button>
+            </div>
+        </div>
     </div>
-
-
-    <div class="d-flex justify-content-end gap-3">
-
-        <a asp-controller="Home"
-           asp-action="Reddit"
-           class="btn btn-outline-secondary rounded-pill px-4">
-
-            <i class="fa-solid fa-x me-1"></i>
-            Cancelar
-        </a>
-
-        @if (ViewContext.RouteData.Values["action"]?.ToString() == "EditarDenuncia" && !Model.arquivada)
-        {
-
-            <a asp-controller="Denuncia"
-               asp-action="DeletarDenuncia"
-               asp-route-id="@Model.id"
-               class="btn btn-danger rounded-pill px-4">
-
-                <i class="fa-solid fa-trash me-1"></i>
-                Deletar
-            </a>
-        }
-
-        <button type="submit"
-                class="btn btn-primary rounded-pill px-4">
-
-            <i class="fa-solid fa-floppy-disk me-2"></i>
-            @(Model.arquivada ? "Desarquivar" : "Salvar")
-        </button>
-
-    </div>
-
 </div>
 
 <script>
     const imagemInput = document.getElementById('imagemInput');
     const preview = document.getElementById('preview');
 
-    imagemInput.addEventListener('change', function() {
+    if (imagemInput && preview) {
+        imagemInput.addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) {
+                preview.src = '';
+                preview.classList.add('d-none');
+                return;
+            }
+            preview.src = URL.createObjectURL(file);
+            preview.classList.remove('d-none');
+        });
+    }
 
-        const file = this.files[0];
+    function alternarAbaFormularioDenuncia(passo) {
+        const p1 = document.getElementById('vp-step-panel-1');
+        const p2 = document.getElementById('vp-step-panel-2');
+        const b1 = document.getElementById('vp-step-btn-1');
+        const b2 = document.getElementById('vp-step-btn-2');
 
-        if (!file) {
-            preview.src = '';
-            preview.classList.add('d-none');
+        if (passo === 1) {
+            p1.style.display = '';
+            p2.style.display = 'none';
+            b1.classList.add('active');
+            b2.classList.remove('active');
+        } else {
+            p1.style.display = 'none';
+            p2.style.display = '';
+            b2.classList.add('active');
+            b1.classList.remove('active');
+
+            if (window.vpLeafletMap) {
+                setTimeout(function () {
+                    window.vpLeafletMap.invalidateSize();
+                }, 120);
+            }
+        }
+    }
+
+    function usarMinhaLocalizacaoGps() {
+        const label = document.getElementById('vp-gps-label');
+        if (!navigator.geolocation) {
+            if (label) label.textContent = "GPS não suportado neste navegador";
             return;
         }
 
-        preview.src = URL.createObjectURL(file);
-        preview.classList.remove('d-none');
-    });
+        if (label) label.textContent = "Obtendo localização...";
+
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+
+                const latInput = document.getElementById('Latitude');
+                const lngInput = document.getElementById('Longitude');
+                if (latInput) latInput.value = lat.toFixed(6);
+                if (lngInput) lngInput.value = lng.toFixed(6);
+
+                if (window.vpLeafletMap && window.vpLeafletMarker) {
+                    window.vpLeafletMap.setView([lat, lng], 16);
+                    window.vpLeafletMarker.setLatLng([lat, lng]);
+                }
+                if (label) label.textContent = "Localização GPS aplicada!";
+            },
+            function () {
+                if (label) label.textContent = "Permissão de GPS negada";
+            }
+        );
+    }
 </script>

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using VozDoPovo.Data;
 using VozDoPovo.Models;
@@ -14,38 +15,51 @@ namespace VozDoPovo.Controllers
             _bancoContext = bancoContext;
         }
 
-
-        public IActionResult CriarDenuncia()
+        public IActionResult CriarDenuncia(string? placa)
         {
-            if (User.EstaLogado())
-                return View(new DenunciaModel());
-            else
+            if (!User.EstaLogado())
                 return RedirectToAction("Index", "Home");
+
+            var model = new DenunciaModel
+            {
+                contexto = !string.IsNullOrWhiteSpace(placa)
+                    ? $"Ocorrência envolvendo veículo de placa {placa.ToUpper()}: "
+                    : string.Empty
+            };
+
+            return View(model);
         }
+
         [HttpPost]
         public async Task<IActionResult> CriarDenuncia(DenunciaModel model)
         {
+            if (!User.EstaLogado())
+                return RedirectToAction("Index", "Home");
+
             if (!ModelState.IsValid)
-                return View();
+                return View(model);
 
             if (model.arquivoImg != null)
             {
-                string nomeArquivo = Path.GetRandomFileName() + Path.GetExtension(model.arquivoImg.FileName);
+                string pastaImagens = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+                Directory.CreateDirectory(pastaImagens);
 
-                using var stream = new FileStream(
-                    Path.Combine("wwwroot/images", nomeArquivo),
-                    FileMode.Create);
+                string nomeArquivo = Path.GetRandomFileName() + Path.GetExtension(model.arquivoImg.FileName);
+                string caminhoCompleto = Path.Combine(pastaImagens, nomeArquivo);
+
+                using var stream = new FileStream(caminhoCompleto, FileMode.Create);
+                await model.arquivoImg.CopyToAsync(stream);
 
                 model.imagem = nomeArquivo;
-
-                await model.arquivoImg.CopyToAsync(stream);
             }
 
+            model.perfil = User.ObterIdUsuario();
             model.data = DateTime.Now;
-
+            model.arquivada = false;
             model.arquivoImg = null;
-            _bancoContext.Denuncias.Update(model);
-            _bancoContext.SaveChanges();
+
+            _bancoContext.Denuncias.Add(model);
+            await _bancoContext.SaveChangesAsync();
 
             TempData[MeusIDs.Sucesso] = JsonSerializer.Serialize(
                 new JsonDenuncia { id = model.id }
@@ -54,15 +68,17 @@ namespace VozDoPovo.Controllers
             return RedirectToAction("Reddit", "Home");
         }
 
-
-        public IActionResult EditarDenuncia(int id)
+        public async Task<IActionResult> EditarDenuncia(int id)
         {
-            DenunciaModel? denuncia = _bancoContext.Denuncias.FirstOrDefault(x => x.id == id);
+            DenunciaModel? denuncia = await _bancoContext.Denuncias.FirstOrDefaultAsync(x => x.id == id);
 
-            if (denuncia == null) { throw new System.Exception("Id de contato nulo"); }
+            if (denuncia == null)
+                return NotFound();
+
             return View(denuncia);
         }
-        public void DeletarImagemPorNome(string nomeArquivo)
+
+        private void DeletarImagemPorNome(string nomeArquivo)
         {
             string arquivo = Path.Combine(
                 Directory.GetCurrentDirectory(),
@@ -76,32 +92,41 @@ namespace VozDoPovo.Controllers
                 System.IO.File.Delete(arquivo);
             }
         }
+
         [HttpPost]
         public async Task<IActionResult> EditarDenuncia(DenunciaModel model)
         {
             if (!ModelState.IsValid)
-                return View();
+                return View(model);
+
+            var denunciaExistente = await _bancoContext.Denuncias.AsNoTracking().FirstOrDefaultAsync(x => x.id == model.id);
+            if (denunciaExistente != null && model.perfil == 0)
+            {
+                model.perfil = denunciaExistente.perfil;
+                model.likes = denunciaExistente.likes;
+                model.dislikes = denunciaExistente.dislikes;
+            }
 
             if (model.arquivoImg != null)
             {
-                if (model.imagem != null)
+                if (!string.IsNullOrEmpty(model.imagem))
                     DeletarImagemPorNome(model.imagem);
 
-                string nomeArquivo = Path.GetRandomFileName() + Path.GetExtension(model.arquivoImg.FileName);
+                string pastaImagens = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+                Directory.CreateDirectory(pastaImagens);
 
-                using var stream = new FileStream( Path.Combine("wwwroot/images",nomeArquivo), FileMode.Create);
+                string nomeArquivo = Path.GetRandomFileName() + Path.GetExtension(model.arquivoImg.FileName);
+                using var stream = new FileStream(Path.Combine(pastaImagens, nomeArquivo), FileMode.Create);
+                await model.arquivoImg.CopyToAsync(stream);
 
                 model.imagem = nomeArquivo;
-
-                await model.arquivoImg.CopyToAsync(stream);
             }
 
             model.data = DateTime.Now;
             model.arquivada = false;
-            //model.arquivoImg = null;
 
             _bancoContext.Denuncias.Update(model);
-            _bancoContext.SaveChanges();
+            await _bancoContext.SaveChangesAsync();
 
             TempData[MeusIDs.Sucesso] = JsonSerializer.Serialize(
                 new JsonDenuncia { id = model.id }
@@ -110,65 +135,67 @@ namespace VozDoPovo.Controllers
             return RedirectToAction("Reddit", "Home");
         }
 
-        //[HttpGet]
         public async Task<IActionResult> DeletarDenuncia(int id)
         {
-            var denuncia = _bancoContext.Denuncias.FirstOrDefault(x => x.id == id);
+            var denuncia = await _bancoContext.Denuncias.FirstOrDefaultAsync(x => x.id == id);
 
             if (denuncia != null)
             {
-                //if (denuncia.imagem != null)
-                //    DeletarImagemPorNome(denuncia.imagem);
-
-                //_bancoContext.Denuncias.Remove(denuncia);
-                //_bancoContext.SaveChanges();
                 denuncia.arquivada = true;
                 _bancoContext.Denuncias.Update(denuncia);
-                _bancoContext.SaveChanges();
+                await _bancoContext.SaveChangesAsync();
             }
 
             return RedirectToAction("Reddit", "Home");
         }
 
-        private IActionResult LikeDislike(int id, string url, bool like)
+        private async Task<IActionResult> LikeDislikeAsync(int id, string? url, bool like)
         {
-            DenunciaModel? denuncia = _bancoContext.Denuncias.FirstOrDefault(x => x.id == id);
+            DenunciaModel? denuncia = await _bancoContext.Denuncias.FirstOrDefaultAsync(x => x.id == id);
 
             if (denuncia != null)
             {
-                if (like)
+                if (like && denuncia.likes < byte.MaxValue)
                     denuncia.likes += 1;
-                else
+                else if (!like && denuncia.dislikes < byte.MaxValue)
                     denuncia.dislikes += 1;
 
                 _bancoContext.Denuncias.Update(denuncia);
-                _bancoContext.SaveChanges();
+                await _bancoContext.SaveChangesAsync();
             }
 
-            return Redirect(url);
+            if (!string.IsNullOrWhiteSpace(url) && Url.IsLocalUrl(url))
+                return LocalRedirect(url);
+
+            return RedirectToAction("Reddit", "Home");
         }
 
-        public IActionResult Like(int id, string a)
+        public async Task<IActionResult> Like(int id, string? a)
         {
-            return LikeDislike(id, a, true);
+            return await LikeDislikeAsync(id, a, true);
         }
 
-        public IActionResult Dislike(int id, string a)
+        public async Task<IActionResult> Dislike(int id, string? a)
         {
-            return LikeDislike(id, a, false);
+            return await LikeDislikeAsync(id, a, false);
         }
 
-        private DenunciaModel? AbrirPost(int id)
+        private async Task<DenunciaModel?> AbrirPostAsync(int id)
         {
-            DenunciaModel? denuncia = _bancoContext.Denuncias.FirstOrDefault(x => x.id == id);
+            DenunciaModel? denuncia = await _bancoContext.Denuncias.FirstOrDefaultAsync(x => x.id == id);
 
             if (denuncia != null)
             {
-                denuncia.comentarios = _bancoContext.Comentarios.Where(x => x.idPost == id).ToList();
-                denuncia.comments = denuncia.comentarios.Count();
+                denuncia.comentarios = await _bancoContext.Comentarios
+                    .Where(x => x.idPost == id)
+                    .OrderByDescending(x => x.id)
+                    .ToListAsync();
+                denuncia.comments = denuncia.comentarios.Count;
+
+                PerfilModel? autor = await _bancoContext.Perfis.FirstOrDefaultAsync(p => p.id == denuncia.perfil);
+                denuncia.nome = autor?.nome ?? "Cidadão";
 
                 ViewBag.map = true;
-
                 return denuncia;
             }
             return null;
@@ -176,27 +203,32 @@ namespace VozDoPovo.Controllers
 
         public async Task<IActionResult> VerDenuncia(int id)
         {
-            var denuncia = AbrirPost(id);
+            var denuncia = await AbrirPostAsync(id);
+            if (denuncia == null)
+                return RedirectToAction("Reddit", "Home");
+
             return View(denuncia);
         }
 
         [HttpPost]
-        public IActionResult Comentar(ComentarioModel comentario)
+        public async Task<IActionResult> Comentar(ComentarioModel comentario)
         {
-            int idPost = comentario.id;
-            var denuncia = AbrirPost(idPost);
+            int idPost = comentario.idPost > 0 ? comentario.idPost : comentario.id;
 
-            if (comentario.mensagem.Length > 0)
+            if (!string.IsNullOrWhiteSpace(comentario.mensagem))
             {
-                comentario.data = DateTime.Now;
-                comentario.idPost = comentario.id;
-                comentario.id = 0;
+                var novoComentario = new ComentarioModel
+                {
+                    idPost = idPost,
+                    mensagem = comentario.mensagem.Trim(),
+                    data = DateTime.Now
+                };
 
-                _bancoContext.Comentarios.Add(comentario);
-                _bancoContext.SaveChanges();
+                _bancoContext.Comentarios.Add(novoComentario);
+                await _bancoContext.SaveChangesAsync();
             }
 
-            return RedirectToAction("VerDenuncia", "Denuncia", denuncia);
+            return RedirectToAction("VerDenuncia", "Denuncia", new { id = idPost });
         }
     }
 }

@@ -1,0 +1,94 @@
+@using System.Globalization
+@using System.Text.Json
+@model List<DenunciaModel>
+
+@{
+    ViewData["Title"] = "Mapa Geral da Cidade";
+    var pinosJson = JsonSerializer.Serialize(
+        (Model ?? new List<DenunciaModel>()).Select(d => new
+        {
+            id = d.id,
+            autor = d.anonimo ? "Relato Anônimo" : d.nome,
+            resumo = d.contexto.Length > 110 ? d.contexto.Substring(0, 110) + "..." : d.contexto,
+            likes = d.likes,
+            comments = d.comments,
+            lat = d.latitude,
+            lng = d.longitude,
+            data = d.data.ToString("dd/MM/yyyy HH:mm")
+        })
+    );
+}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<div class="vp-banner d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-4">
+    <div style="max-width: 620px; position: relative; z-index: 2;">
+        <div class="vp-banner-pill">
+            <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+                <line x1="9" y1="3" x2="9" y2="18" />
+                <line x1="15" y1="6" x2="15" y2="21" />
+            </svg>
+            <span>VISÃO GEORREFERENCIADA</span>
+        </div>
+        <h2 class="mb-2" style="font-size: 1.6rem; font-weight: 800;">
+            Mapa Geral de Ocorrências da Cidade
+        </h2>
+        <p class="mb-0" style="font-size: 0.88rem; opacity: 0.9;">
+            Clique em qualquer marcador no mapa para visualizar o resumo da denúncia e acessar os detalhes completos.
+        </p>
+    </div>
+
+    <div class="text-center px-4 py-2 rounded-4" style="background: rgba(255,255,255,0.15); position: relative; z-index: 2;">
+        <div style="font-size: 1.35rem; font-weight: 800;">@(Model?.Count ?? 0)</div>
+        <div style="font-size: 0.72rem; opacity: 0.85;">Pinos no Mapa</div>
+    </div>
+</div>
+
+<div class="vp-card p-4">
+    <div id="mapa-cidade-geral" style="height: 520px; width: 100%; border-radius: 18px; border: 1.5px solid var(--vp-border);"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const pinos = @Html.Raw(pinosJson);
+        const centroPadrao = pinos.length > 0 ? [pinos[0].lat, pinos[0].lng] : [-8.769666, -63.884296];
+
+        const map = L.map('mapa-cidade-geral').setView(centroPadrao, 13);
+
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        const group = [];
+
+        pinos.forEach(function (p) {
+            const marker = L.marker([p.lat, p.lng]).addTo(map);
+            const popupHtml = `
+                <div style="min-width: 210px; font-family: 'Segoe UI', sans-serif;">
+                    <div style="font-weight: 800; color: #05264C; margin-bottom: 4px;">
+                        Denúncia #${p.id} — ${p.autor}
+                    </div>
+                    <div style="font-size: 12px; color: #475569; margin-bottom: 8px;">
+                        ${p.resumo}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #64748B;">
+                        <span>👍 ${p.likes} • 💬 ${p.comments}</span>
+                        <a href="/Denuncia/VerDenuncia/${p.id}" style="color: #0B56BA; font-weight: 700; text-decoration: none;">
+                            Ver detalhes →
+                        </a>
+                    </div>
+                </div>
+            `;
+            marker.bindPopup(popupHtml);
+            group.push(marker);
+        });
+
+        if (group.length > 1) {
+            const featureGroup = L.featureGroup(group);
+            map.fitBounds(featureGroup.getBounds().pad(0.2));
+        }
+    });
+</script>

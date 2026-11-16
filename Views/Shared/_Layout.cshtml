@@ -1,187 +1,299 @@
 ﻿@using System.Security.Claims
+@using VozDoPovo.Data
 
 <!DOCTYPE html>
-<html lang="pt-br">
-
+<html lang="pt-BR" data-theme="light">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Voz do Povo</title>
-    <script type="importmap"></script>
+    <title>@(ViewData["Title"] != null ? $"{ViewData["Title"]} - Voz do Povo" : "Voz do Povo — Denuncie. Sua Voz, Nossa Cidade.")</title>
+    <script>
+        (function () {
+            const salvo = localStorage.getItem('vp-theme');
+            if (salvo === 'dark' || salvo === 'light') {
+                document.documentElement.setAttribute('data-theme', salvo);
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/StockFlow.styles.css" asp-append-version="true" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-
-    <style>
-            /* CONFIGURAÇÕES GERAIS */
-            :root {
-                --bg-dark: #0f172a;
-                --bg-sidebar: #1e293b;
-                --accent-orange: #ff8c00;
-                --accent-green: #22c55e;
-                --accent-red: #ef4444;
-                --text-main: #f8fafc;
-                --text-muted: #94a3b8;
-            }
-
-            body {
-                margin: 0;
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background-color: var(--bg-dark);
-                color: var(--text-main);
-                display: flex;
-                height: 100vh;
-            }
-
-            /* BARRA LATERAL (SIDEBAR) */
-            .sidebar {
-                width: 260px;
-                background-color: var(--bg-sidebar);
-                display: flex;
-                flex-direction: column;
-                padding: 20px;
-                border-right: 1px solid #334155;
-            }
-
-            .logo {
-                font-size: 24px;
-                font-weight: bold;
-                margin-bottom: 40px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-
-                .logo span {
-                    color: var(--accent-orange);
-                }
-
-            .nav-menu {
-                list-style: none;
-                padding: 0;
-                flex-grow: 1;
-            }
-
-            .nav-item {
-                padding: 12px 15px;
-                margin-bottom: 8px;
-                border-radius: 8px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                transition: 0.3s;
-                color: var(--text-muted);
-                text-decoration: none;
-            }
-
-                .nav-item:hover, .nav-item.active {
-                    background-color: #334155;
-                    color: white;
-                }
-
-                .nav-item.active {
-                    border-left: 4px solid var(--accent-green);
-                }
-
-            /* CONTEÚDO PRINCIPAL */
-
-            .top-bar {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 10px;
-                margin-top: 10px;
-            }
-
-    </style>
 </head>
 
 @{
-    string? nome = User.Identity != null ? User.Identity.Name : null;
+    bool logado = User.EstaLogado();
+    string? nome = User.ObterNomeUsuario();
+    string cargo = User.ObterCargo();
+    string iniciais = !string.IsNullOrWhiteSpace(nome) && nome.Length >= 2
+        ? nome.Substring(0, 2).ToUpper()
+        : (!string.IsNullOrWhiteSpace(nome) ? nome.ToUpper() : "VP");
     string? paginaAtual = ViewContext.RouteData.Values["action"]?.ToString();
 }
 
 <body>
-    <div class="sidebar">
-        <div class="logo">
-            @* <i class="fa-solid fa-box-open" style="color: var(--accent-orange);"></i>
-            STOCK<span>FLOW</span> *@
-            <img src="~/VozDoPovoIcone.png" width="50" height="50" />
-            <a class="navbar-brand" asp-controller="Home" asp-action="Index" style="color:var(--accent-green)">Voz do Povo</a>
-        </div>
+    <div class="vp-app-shell">
+        <!-- BARRA LATERAL OFICIAL VOZ DO POVO -->
+        <aside class="vp-sidebar">
+            <div>
+                <!-- Bloco da Marca Oficial -->
+                <div class="vp-brand-box">
+                    <a asp-controller="Home" asp-action="Reddit" class="text-decoration-none">
+                        <div class="vp-logo-ring">
+                            <div class="vp-logo-inner">
+                                <img src="~/VozDoPovoIcone.png" alt="Logo Voz do Povo" />
+                            </div>
+                        </div>
+                        <div class="vp-brand-title">
+                            <span class="vp-word-voz">Voz</span>
+                            <span class="vp-word-do">do</span>
+                            <span class="vp-word-povo">Povo</span>
+                        </div>
+                    </a>
+                    <div class="vp-brand-slogan">
+                        Denuncie. Sua voz, nossa cidade.
+                    </div>
 
+                    <!-- Os 4 Ícones Vetoriais de Linha da Base da Logo -->
+                    <div class="vp-logo-icons-bar" title="Iluminação • Limpeza Urbana • Água & Saneamento • Buracos & Vias">
+                        <span class="vp-line-blue"></span>
+                        <!-- 1. Poste de Iluminação -->
+                        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                            <path d="M9 21V8a4 4 0 0 1 4-4h4" />
+                            <rect x="15" y="3" width="5" height="2.5" rx="1" />
+                            <path d="M6 21h6" />
+                            <path d="M13 14l2-2m-2 5l3 1" />
+                        </svg>
+                        <!-- 2. Saco de Lixo / Limpeza -->
+                        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                            <path d="M9 4h6l-1.5 3h-3L9 4z" />
+                            <path d="M7 11c0-2.5 2-4 5-4s5 1.5 5 4c1 2 1.5 5 1 7-.4 1.5-2 2-6 2s-5.6-.5-6-2c-.5-2 0-5 1-7z" />
+                        </svg>
+                        <!-- 3. Torneira / Saneamento -->
+                        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                            <path d="M7 6h6M10 6v4" />
+                            <path d="M4 10h11a3 3 0 0 1 3 3v2h-3v-1a1 1 0 0 0-1-1H4v-3z" />
+                            <path d="M16.5 18.5c0 1.2-1 2.2-1.5 2.2s-1.5-1-1.5-2.2c0-.8 1.5-2.5 1.5-2.5s1.5 1.7 1.5 2.5z" />
+                        </svg>
+                        <!-- 4. Cratera / Buraco na Via -->
+                        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                            <ellipse cx="12" cy="14" rx="8" ry="4.5" />
+                            <path d="M6 12.5l3 1.5 4-1 4 1.5" />
+                        </svg>
+                        <span class="vp-line-green"></span>
+                    </div>
+                </div>
 
-        <nav class="nav-menu">
-
-            <a class="nav-link nav-item @(paginaAtual == "Reddit" ? "active" : "")"
-               asp-controller="Home"
-               asp-action="Reddit">
-                <i class="fa-solid fa-house"></i>Página Inicial
-            </a>
-
-            <a class="nav-link nav-item @(paginaAtual == "Lixeira" ? "active" : "")"
-               asp-controller="Home"
-               asp-action="Lixeira">
-                <i class="fa-solid fa-trash"></i>Lixeira
-            </a>
-
-            <a class="nav-link nav-item @(paginaAtual == "CriarDenuncia" ? "active" : "")"
-               asp-controller="Denuncia"
-               asp-action="CriarDenuncia">
-                <i class="fa-solid fa-plus-circle"></i>Fazer Denúncia
-            </a>
-
-            @if (nome == null)
-            {
-                <a class="nav-link nav-item @(paginaAtual == "CriarPerfil" ? "active" : "")"
-                   asp-controller="Home"
-                   asp-action="CriarPerfil">
-                    <i class="fa-solid fa-solid fa-user"></i>Cadastrar
+                <!-- Botão Principal CTA: Fazer Denúncia -->
+                <a asp-controller="Denuncia"
+                   asp-action="CriarDenuncia"
+                   class="btn-vp-verde w-100 mb-4 py-2">
+                    <svg class="vp-svg" viewBox="0 0 24 24">
+                        <path d="m3 11 18-5v12L3 14v-3z" />
+                        <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+                    </svg>
+                    <span>Fazer Nova Denúncia</span>
                 </a>
-            }
 
-        </nav>
-        <a href="#" class="nav-item"><i class="fa-solid fa-gear"></i> Configurações</a>
+                <!-- Abas de Navegação -->
+                <div class="vp-nav-section-label">Navegação Cidadã</div>
+                <nav class="vp-nav-menu">
+                    <a class="vp-nav-item @(paginaAtual == "Reddit" ? "active" : "")"
+                       asp-controller="Home"
+                       asp-action="Reddit">
+                        <span class="vp-nav-item-left">
+                            <span class="vp-icon-box">
+                                <svg class="vp-svg" viewBox="0 0 24 24">
+                                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                                    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                                    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                                </svg>
+                            </span>
+                            <span>Mural da Cidade</span>
+                        </span>
+                        <span class="vp-nav-badge">Feed</span>
+                    </a>
 
-        &copy; 2026 - Voz do Povo
-    </div>
+                    <a class="vp-nav-item @(paginaAtual == "MapaGeral" ? "active" : "")"
+                       asp-controller="Home"
+                       asp-action="MapaGeral">
+                        <span class="vp-nav-item-left">
+                            <span class="vp-icon-box">
+                                <svg class="vp-svg" viewBox="0 0 24 24">
+                                    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+                                    <line x1="9" y1="3" x2="9" y2="18" />
+                                    <line x1="15" y1="6" x2="15" y2="21" />
+                                </svg>
+                            </span>
+                            <span>Mapa Geral da Cidade</span>
+                        </span>
+                        <span class="vp-nav-badge">GPS</span>
+                    </a>
 
-    <div class="container">
-        <main role="main" class="pb-3">
-            <div class="top-bar">
-                <h2>@ViewData["Title"]</h2>
-                <div style="color: var(--text-muted)">
+                    @if (logado)
+                    {
+                        <a class="vp-nav-item @(paginaAtual == "MinhasDenuncias" ? "active" : "")"
+                           asp-controller="Home"
+                           asp-action="MinhasDenuncias">
+                            <span class="vp-nav-item-left">
+                                <span class="vp-icon-box">
+                                    <svg class="vp-svg" viewBox="0 0 24 24">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                        <line x1="16" y1="13" x2="8" y2="13" />
+                                        <line x1="16" y1="17" x2="8" y2="17" />
+                                    </svg>
+                                </span>
+                                <span>Minhas Denúncias</span>
+                            </span>
+                        </a>
+                    }
 
-                    <i class="fa-solid fa-circle-user"></i> @(nome != null ? nome : "Convidado")
-                    <a class="mx-2"></a>
-                    <i class="fa-solid fa-award"></i> @(User.FindFirst(ClaimTypes.Role) != null ? @User.FindFirst(ClaimTypes.Role)?.Value : "Convidado")
+                    <a class="vp-nav-item @(paginaAtual == "LeitorPlaca" ? "active" : "")"
+                       asp-controller="Home"
+                       asp-action="LeitorPlaca">
+                        <span class="vp-nav-item-left">
+                            <span class="vp-icon-box">
+                                <svg class="vp-svg" viewBox="0 0 24 24">
+                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                    <circle cx="12" cy="13" r="4" />
+                                </svg>
+                            </span>
+                            <span>Leitor de Placas (IA)</span>
+                        </span>
+                        <span class="vp-nav-badge">OCR</span>
+                    </a>
 
-                    @if (nome != null)
+                    <a class="vp-nav-item @(paginaAtual == "Lixeira" ? "active" : "")"
+                       asp-controller="Home"
+                       asp-action="Lixeira">
+                        <span class="vp-nav-item-left">
+                            <span class="vp-icon-box">
+                                <svg class="vp-svg" viewBox="0 0 24 24">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                    <polyline points="22 4 12 14.01 9 11.01" />
+                                </svg>
+                            </span>
+                            <span>Arquivo / Resolvidas</span>
+                        </span>
+                    </a>
+
+                    @if (!logado)
+                    {
+                        <a class="vp-nav-item @(paginaAtual == "Index" || paginaAtual == "CriarPerfil" ? "active" : "")"
+                           asp-controller="Home"
+                           asp-action="Index">
+                            <span class="vp-nav-item-left">
+                                <span class="vp-icon-box">
+                                    <svg class="vp-svg" viewBox="0 0 24 24">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                        <circle cx="12" cy="7" r="4" />
+                                    </svg>
+                                </span>
+                                <span>Login / Cadastro</span>
+                            </span>
+                        </a>
+                    }
+                </nav>
+            </div>
+
+            <!-- Rodapé da Sidebar: Alternador de Tema + Card do Usuário -->
+            <div class="pt-3 border-top mt-4">
+                <button type="button"
+                        onclick="alternarTemaVozDoPovo()"
+                        class="btn-vp-neutro w-100 mb-3 justify-content-center">
+                    <!-- Ícone Sol (visível no modo escuro) -->
+                    <svg id="vp-icon-sun" class="vp-svg-sm" viewBox="0 0 24 24" style="display:none;">
+                        <circle cx="12" cy="12" r="5" />
+                        <line x1="12" y1="1" x2="12" y2="3" />
+                        <line x1="12" y1="21" x2="12" y2="23" />
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                        <line x1="1" y1="12" x2="3" y2="12" />
+                        <line x1="21" y1="12" x2="23" y2="12" />
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                    </svg>
+                    <!-- Ícone Lua (visível no modo claro) -->
+                    <svg id="vp-icon-moon" class="vp-svg-sm" viewBox="0 0 24 24">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    </svg>
+                    <span id="vp-theme-label">Tema Escuro</span>
+                </button>
+
+                <div class="vp-user-card">
+                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                        <div class="vp-avatar">@iniciais</div>
+                        <div class="overflow-hidden">
+                            <div class="fw-bold text-truncate" style="font-size: 0.82rem;">
+                                @(nome ?? "Visitante")
+                            </div>
+                            <div style="font-size: 0.72rem; color: var(--vp-green); font-weight: 700;">
+                                ● @cargo
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (logado)
                     {
                         <a asp-controller="Home"
                            asp-action="Logout"
-                           class="btn btn-outline-secondary rounded-pill mx-2">
-
-                            <i class="fa-solid fa-x me-1"></i>
-                            Sair
+                           title="Sair da conta"
+                           class="btn-vp-neutro p-2">
+                            <svg class="vp-svg-sm text-danger" viewBox="0 0 24 24">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                <polyline points="16 17 21 12 16 7" />
+                                <line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
                         </a>
                     }
-                        else
-                        {
+                    else
+                    {
                         <a asp-controller="Home"
                            asp-action="Index"
-                           class="btn btn-primary rounded-pill">
-
-                            <i class="fa-solid fa-right-to-bracket me-1"></i>
+                           title="Entrar na conta"
+                           class="btn-vp-azul px-3 py-1" style="font-size: 0.75rem;">
                             Entrar
                         </a>
-                        }
-                    </div>
+                    }
+                </div>
+
+                <div class="text-center mt-2" style="font-size: 0.72rem; color: var(--vp-text-muted);">
+                    &copy; 2026 — Voz do Povo
+                </div>
             </div>
-            @RenderBody()
-        </main>
+        </aside>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <div class="vp-main-wrapper">
+            <header class="vp-topbar">
+                <div>
+                    <h1 class="vp-topbar-title">@(ViewData["Title"] ?? "Voz do Povo")</h1>
+                    <p class="vp-topbar-sub">Denuncie. Sua voz, nossa cidade — participação cidadã geolocalizada</p>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <a asp-controller="Home" asp-action="MapaGeral" class="btn-vp-neutro">
+                        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                            <circle cx="12" cy="10" r="3" />
+                        </svg>
+                        <span>Mapa Geral</span>
+                    </a>
+
+                    <a asp-controller="Denuncia" asp-action="CriarDenuncia" class="btn-vp-verde">
+                        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span>Nova Denúncia</span>
+                    </a>
+                </div>
+            </header>
+
+            <main role="main" class="vp-content-area">
+                @RenderBody()
+            </main>
+        </div>
     </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

@@ -1,114 +1,170 @@
-﻿@model DenunciaModel
+﻿@using System.Globalization
+@model DenunciaModel
 
-<div data-id="@Model.id"
-     class="card denuncia-card border-0 shadow-lg mb-4">
+@{
+    string textoLower = (Model.contexto ?? string.Empty).ToLower();
+    string categoriaSlug = "geral";
+    string categoriaNome = "Ocorrência Urbana";
+
+    if (textoLower.Contains("poste") || textoLower.Contains("luz") || textoLower.Contains("ilumina") || textoLower.Contains("escuro") || textoLower.Contains("lâmpada"))
+    {
+        categoriaSlug = "iluminacao";
+        categoriaNome = "Iluminação Pública";
+    }
+    else if (textoLower.Contains("lixo") || textoLower.Contains("entulho") || textoLower.Contains("coleta") || textoLower.Contains("limpeza") || textoLower.Contains("mato"))
+    {
+        categoriaSlug = "lixo";
+        categoriaNome = "Limpeza & Lixo";
+    }
+    else if (textoLower.Contains("água") || textoLower.Contains("agua") || textoLower.Contains("vazamento") || textoLower.Contains("esgoto") || textoLower.Contains("bueiro") || textoLower.Contains("cano"))
+    {
+        categoriaSlug = "agua";
+        categoriaNome = "Água & Saneamento";
+    }
+    else if (textoLower.Contains("buraco") || textoLower.Contains("cratera") || textoLower.Contains("asfalto") || textoLower.Contains("rua") || textoLower.Contains("calçada") || textoLower.Contains("via"))
+    {
+        categoriaSlug = "vias";
+        categoriaNome = "Buracos & Vias";
+    }
+
+    string autorExibido = Model.anonimo ? "Relato Anônimo" : (!string.IsNullOrWhiteSpace(Model.nome) ? Model.nome : "Cidadão");
+    string iniciaisAutor = Model.anonimo
+        ? "AN"
+        : (autorExibido.Length >= 2 ? autorExibido.Substring(0, 2).ToUpper() : "CD");
+}
+
+<article data-id="@Model.id"
+         data-cat="@categoriaSlug"
+         data-likes="@Model.likes"
+         data-comments="@Model.comments"
+         class="card denuncia-card border-0 mb-4 vp-post-item">
 
     <div class="card-body p-4">
-
-        <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
-
+        <!-- Cabeçalho da Postagem -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 border-bottom pb-3 mb-3">
             <div class="d-flex align-items-center gap-3">
-                <div class="denuncia-date">
-                    <i class="fa-solid fa-calendar-days me-2"></i>
-                    @Model.data
+                <div class="vp-avatar">
+                    @if (Model.anonimo)
+                    {
+                        <svg class="vp-svg" viewBox="0 0 24 24">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
+                    }
+                    else
+                    {
+                        @iniciaisAutor
+                    }
+                </div>
+                <div>
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <span class="fw-bold" style="font-size: 0.95rem;">@autorExibido</span>
+                        <span class="badge rounded-pill" style="background: var(--vp-surface-alt); color: var(--vp-blue); border: 1px solid var(--vp-border); font-weight: 700;">
+                            @categoriaNome
+                        </span>
+                        @if (Model.arquivada)
+                        {
+                            <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-25">
+                                Resolvida / Arquivada
+                            </span>
+                        }
+                    </div>
+                    <div class="denuncia-date mt-1">
+                        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="18" rx="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
+                        <span>@Model.data.ToString("dd/MM/yyyy 'às' HH:mm") • Denúncia #@Model.id</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="d-flex align-items-center gap-3">
-                <div class="denuncia-date">
-                    <i class="fa-solid fa-location-dot me-2"></i>
-                    @($"{Model.latitude} {Model.longitude}")
-                </div>
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <span class="btn-vp-neutro py-1 px-3" style="font-size: 0.78rem; cursor: default;">
+                    <svg class="vp-svg-sm" style="color: var(--vp-blue);" viewBox="0 0 24 24">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    <span>@Model.latitude.ToString("F5", CultureInfo.InvariantCulture), @Model.longitude.ToString("F5", CultureInfo.InvariantCulture)</span>
+                </span>
+
+                @if (User.Identity != null && User.Identity.IsAuthenticated && User.Identity.Name == Model.nome)
+                {
+                    <a class="btn-vp-neutro py-1 px-3"
+                       asp-controller="Denuncia"
+                       asp-action="EditarDenuncia"
+                       asp-route-id="@Model.id">
+                        <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                        <span>Editar</span>
+                    </a>
+                }
             </div>
-
-            <div class="d-flex align-items-center gap-3">
-                <div class="denuncia-date">
-                    <i class="fa-solid fa-person me-2"></i>
-
-                    @(Model.anonimo ? "Anônimo" : Model.nome)
-                </div>
-            </div>
-
-            @if (User.Identity != null && User.Identity.Name == Model.nome)
-            {
-                <a class="btn btn-outline-primary rounded-pill px-4"
-                   asp-controller="Denuncia"
-                   asp-action="EditarDenuncia"
-                   asp-route-id="@Model.id">
-
-                    <i class="fa-solid fa-pen-to-square me-2"></i>
-                    Editar
-                </a>
-            }
         </div>
 
-        <div class="row">
-
+        <!-- Conteúdo e Foto da Denúncia -->
+        <div class="row g-4 align-items-center">
             <div class="@(Model.imagem != null ? "col-lg-8" : "col-12")">
-
-                <div class="denuncia-content">
-                    @Model.contexto
-                </div>
+                <div class="denuncia-content">@Model.contexto</div>
             </div>
 
             @if (Model.imagem != null)
             {
-                <div class="col-lg-4 pb-2">
-
+                <div class="col-lg-4">
                     <div class="image-wrapper">
                         <img src="~/images/@Model.imagem"
-                             class="img-fluid rounded-4 h-100 w-100 object-fit-cover"
-                             alt="Imagem da denúncia">
+                             class="img-fluid h-100 w-100 object-fit-cover"
+                             alt="Imagem da denúncia #@Model.id" />
                     </div>
-
                 </div>
             }
-            
-            @if (ViewBag.map!=null)
-            {
-                <div class="border-bottom"></div>
+        </div>
 
-                <div class="container mt-2 mb-2">
-                    <partial name="_Mapa" />
-                </div>
-            }
-
-            @* Botões de baixo *@
-            <div class="border-bottom"></div>
-
-            <div class="d-flex" style="float:right">
-                @* <div>"@($"{Context.Request.Path}{Context.Request.QueryString}")"</div> *@
-                <div class="btn btn-primary rounded-pill">
-                    <a class="btn btn-primary"
-                       asp-controller="Denuncia"
-                       asp-action="Like"
-                       asp-route-id="@Model.id"
-                       asp-route-a="@Context.Request.Path">
-
-                        <i class="fa-solid fa-thumbs-up me-2"></i>
-                        @Model.likes
-                    </a>
-
-                    <a class="btn btn-primary"
-                       asp-controller="Denuncia"
-                       asp-action="Dislike"
-                       asp-route-id="@Model.id"
-                       asp-route-a="@Context.Request.Path">
-
-                        <i class="fa-solid fa-thumbs-down me-2"></i>
-                        @Model.dislikes
-                    </a>
-
-                    <a class="btn btn-primary align-content-end px-4"
-                       asp-controller="Denuncia"
-                       asp-action="VerDenuncia"
-                       asp-route-id="@Model.id">
-
-                        <i class="fa-solid fa-comment me-2"></i>
-                        @Model.comments
-                    </a>
-                </div>
+        @if (ViewBag.map != null)
+        {
+            <div class="border-top mt-4 pt-3">
+                <partial name="_Mapa" />
             </div>
+        }
+
+        <!-- Rodapé de Engajamento (Botões Independentes com Ícones SVG) -->
+        <div class="border-top mt-4 pt-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <a class="vp-btn-like"
+                   asp-controller="Denuncia"
+                   asp-action="Like"
+                   asp-route-id="@Model.id"
+                   asp-route-a="@Context.Request.Path">
+                    <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                    </svg>
+                    <span>@Model.likes</span>
+                </a>
+
+                <a class="vp-btn-dislike"
+                   asp-controller="Denuncia"
+                   asp-action="Dislike"
+                   asp-route-id="@Model.id"
+                   asp-route-a="@Context.Request.Path">
+                    <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                        <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
+                    </svg>
+                    <span>@Model.dislikes</span>
+                </a>
+            </div>
+
+            <a class="btn-vp-azul py-1 px-4"
+               asp-controller="Denuncia"
+               asp-action="VerDenuncia"
+               asp-route-id="@Model.id">
+                <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <span>@Model.comments @(Model.comments == 1 ? "Comentário" : "Comentários") & Mapa</span>
+            </a>
         </div>
     </div>
-</div>           
+</article>

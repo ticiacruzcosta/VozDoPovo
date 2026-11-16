@@ -1,11 +1,8 @@
 ﻿@model PerfilModel
+@{
+    ViewData["Title"] = "Acessar Conta";
+}
 
-<h3 class="mb-4">
-    <i class="fa-solid fa-user-pen me-2" style="color:cornflowerblue"></i>
-    Tela de Login
-</h3>
-
-<form asp-action="Login" method="post" enctype="multipart/form-data" class="text-lg-start">
-
+<form asp-action="Login" method="post" enctype="multipart/form-data">
     <partial name="_FormularioPerfil" />
 </form>

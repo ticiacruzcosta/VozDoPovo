@@ -1,0 +1,72 @@
+@{
+    ViewData["Title"] = "Leitor Inteligente de Placas (IA)";
+}
+
+<div class="vp-banner d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-4">
+    <div style="max-width: 620px; position: relative; z-index: 2;">
+        <div class="vp-banner-pill">
+            <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+            </svg>
+            <span>RECONHECIMENTO ÓPTICO (OCR IA)</span>
+        </div>
+        <h2 class="mb-2" style="font-size: 1.6rem; font-weight: 800;">
+            Leitor Automático de Placas Veiculares
+        </h2>
+        <p class="mb-0" style="font-size: 0.88rem; opacity: 0.9;">
+            Aponte a câmera para identificar placas de veículos abandonados ou em infração na via pública e anexe o código diretamente em uma nova denúncia.
+        </p>
+    </div>
+</div>
+
+<div class="vp-card p-4 p-lg-5">
+    <div class="row g-4 align-items-center">
+        <div class="col-lg-7 d-flex flex-column align-items-center">
+            <div class="camera-frame shadow-sm">
+                <video id="cameraVideo" autoplay playsinline></video>
+                <canvas id="overlayCanvas"></canvas>
+                <canvas id="cameraCanvas" style="display:none;"></canvas>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="p-4 rounded-4 mb-3" style="background: var(--vp-surface-alt); border: 1px solid var(--vp-border);">
+                <div style="font-size: 0.78rem; color: var(--vp-text-muted); font-weight: 700; text-transform: uppercase;">
+                    Status da Leitura
+                </div>
+                <div id="print" class="fw-extrabold mt-2" style="font-size: 1.4rem; font-weight: 800; color: var(--vp-green); font-family: monospace;">
+                    Aguardando captura...
+                </div>
+                <p class="mt-2 mb-0" style="font-size: 0.82rem; color: var(--vp-text-muted);">
+                    Posicione a placa no centro do vídeo e clique em <strong>Capturar e Ler Placa</strong>.
+                </p>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button id="enviar" type="button" class="btn-vp-azul py-3">
+                    <svg class="vp-svg" viewBox="0 0 24 24">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                    </svg>
+                    <span>Capturar e Ler Placa</span>
+                </button>
+
+                <a id="btn-denunciar-placa"
+                   asp-controller="Denuncia"
+                   asp-action="CriarDenuncia"
+                   class="btn-vp-verde py-3">
+                    <svg class="vp-svg" viewBox="0 0 24 24">
+                        <path d="m3 11 18-5v12L3 14v-3z" />
+                        <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+                    </svg>
+                    <span>Abrir Nova Denúncia com Placa</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/CameraPlaca.js" asp-append-version="true"></script>
+}

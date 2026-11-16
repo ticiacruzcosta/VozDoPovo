@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace VozDoPovo.Models
 {
@@ -13,10 +11,3 @@ namespace VozDoPovo.Models
         public DateTime data { get; set; }
     }
 }
-//create table Comentarios (
-//	id int primary key identity,
-//    idPost int not null,
-//    mensagem text not null,
-//    data datetime not null,
-//    CONSTRAINT fkComentario FOREIGN KEY (idPost) REFERENCES Denuncias(id)
-//)

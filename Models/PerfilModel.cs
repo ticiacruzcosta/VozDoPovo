@@ -9,11 +9,12 @@ namespace VozDoPovo.Models
     {
         public int id { get; set; }
 
-        [StringLength(25, MinimumLength = 3)]
+        [Required(ErrorMessage = "O nome de usuário é obrigatório.")]
+        [StringLength(25, MinimumLength = 3, ErrorMessage = "O nome deve ter entre 3 e 25 caracteres.")]
         public required string nome { get; set; } = string.Empty;
-        
-        [Required(ErrorMessage = "Pass word is required")]
-        [StringLength(25, MinimumLength = 3)]
+
+        [Required(ErrorMessage = "A senha é obrigatória.")]
+        [StringLength(25, MinimumLength = 3, ErrorMessage = "A senha deve ter entre 3 e 25 caracteres.")]
         [DataType(DataType.Password)]
         public required string senha { get; set; } = string.Empty;
 
@@ -26,14 +27,3 @@ namespace VozDoPovo.Models
         public string? foto { get; set; }
     }
 }
-/*
-create table Perfis (
-	id int primary key identity,
-    nome nvarchar(25) not null,
-    senha varchar(25) not null,
-    cargo tinyint not null,
-    criada datetime not null,
-    ultimoLogin datetime not null,
-    foto nvarchar(20)
-)
-*/

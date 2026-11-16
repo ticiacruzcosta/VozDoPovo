@@ -1,6 +1,36 @@
-﻿<h3>
-    <i class="fa-solid fa-list me-2"></i>
-    Denúncias Recentes
-</h3>
+﻿@model List<DenunciaModel>
+@{
+    ViewData["Title"] = "Mural da Cidade";
+    int totalAtivas = Model?.Count ?? 0;
+}
 
-<partial name="_Homepage"/>
+<!-- Banner Oficial com o Degradê da Logo -->
+<div class="vp-banner d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-4">
+    <div style="max-width: 600px; position: relative; z-index: 2;">
+        <div class="vp-banner-pill">
+            <svg class="vp-svg-sm" viewBox="0 0 24 24">
+                <path d="m3 11 18-5v12L3 14v-3z" />
+                <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+            </svg>
+            <span>DENUNCIE. SUA VOZ, NOSSA CIDADE.</span>
+        </div>
+        <h2 class="fw-extrabold mb-2" style="font-size: 1.65rem; font-weight: 800;">
+            Ocorrências Recentes da Comunidade
+        </h2>
+        <p class="mb-0" style="font-size: 0.88rem; opacity: 0.9;">
+            Fiscalize problemas de iluminação pública, limpeza urbana, vazamentos de água ou buracos nas vias com localização exata no mapa.
+        </p>
+    </div>
+
+    <div class="d-flex align-items-center gap-3 flex-shrink-0" style="position: relative; z-index: 2;">
+        <div class="text-center px-4 py-2 rounded-4" style="background: rgba(255,255,255,0.15);">
+            <div style="font-size: 1.35rem; font-weight: 800;">@totalAtivas</div>
+            <div style="font-size: 0.72rem; opacity: 0.85;">Ativas</div>
+        </div>
+        <a asp-controller="Denuncia" asp-action="CriarDenuncia" class="btn-vp-neutro bg-white text-dark border-0 fw-bold px-4 py-2">
+            + Fazer Denúncia
+        </a>
+    </div>
+</div>
+
+<partial name="_Homepage" />

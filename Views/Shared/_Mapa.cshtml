@@ -1,12 +1,14 @@
-﻿@model DenunciaModel
+﻿@using System.Globalization
+@model DenunciaModel
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
     #map {
-        height: 500px;
+        height: 400px;
         width: 100%;
-        border-radius: 8px;
-        border: 1px solid #ccc;
+        border-radius: 18px;
+        border: 1.5px solid var(--vp-border);
+        z-index: 1;
     }
 
     .map-coordinates {
@@ -15,72 +17,54 @@
 </style>
 
 <div id="map"></div>
-<a id="x" hidden="hidden">@Model.latitude</a>
-<a id="y" hidden="hidden">@Model.longitude</a>
+<input type="hidden" id="vp-map-lat" value="@Model.latitude.ToString(CultureInfo.InvariantCulture)" />
+<input type="hidden" id="vp-map-lng" value="@Model.longitude.ToString(CultureInfo.InvariantCulture)" />
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    window.addEventListener('DOMContentLoaded', function() {
-        const initialLatitude = parseFloat(document.getElementById("x").textContent)
-        const initialLongitude = parseFloat(document.getElementById("y").textContent)
+    window.addEventListener('DOMContentLoaded', function () {
+        const latEl = document.getElementById("vp-map-lat");
+        const lngEl = document.getElementById("vp-map-lng");
+        const initialLatitude = parseFloat(latEl ? latEl.value : "-8.769666") || -8.769666;
+        const initialLongitude = parseFloat(lngEl ? lngEl.value : "-63.884296") || -63.884296;
 
-        // Create the map.
-        const map = L.map('map').setView(
-            [initialLatitude, initialLongitude],
-            14
-        );
+        const map = L.map('map').setView([initialLatitude, initialLongitude], 14);
+        window.vpLeafletMap = map;
 
-        // Load OpenStreetMap tiles.
-        L.tileLayer(
-            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            {
-                maxZoom: 19,
-                attribution:
-                    '&copy; <a href="https://www.openstreetmap.org/copyright">' +
-                    'OpenStreetMap</a> contributors'
-            }
-        ).addTo(map);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
 
-    
-        // Create a draggable marker.
-        const marker = L.marker(
-            [initialLatitude, initialLongitude],
-            { draggable: true }
-        ).addTo(map);
-        
-            // Update the form fields.
+        const isEditable = document.getElementById('edit') !== null;
+        const marker = L.marker([initialLatitude, initialLongitude], { draggable: isEditable }).addTo(map);
+        window.vpLeafletMarker = marker;
+
         const latitudeInput = document.getElementById('Latitude');
         const longitudeInput = document.getElementById('Longitude');
 
         function updateCoordinates(latitude, longitude) {
-            if (latitudeInput) {
+            if (latitudeInput && longitudeInput) {
                 latitudeInput.value = latitude.toFixed(6);
                 longitudeInput.value = longitude.toFixed(6);
             }
         }
 
-        // Initialize the fields.
         updateCoordinates(initialLatitude, initialLongitude);
 
-        if (document.getElementById('edit')) {
-            // Clicking the map moves the marker.
+        if (isEditable) {
             marker.bindPopup('Localização selecionada').openPopup();
 
-            map.on('click', function(event) {
+            map.on('click', function (event) {
                 marker.setLatLng(event.latlng);
-
                 updateCoordinates(event.latlng.lat, event.latlng.lng);
-
                 marker.openPopup();
             });
 
-            // Dragging the marker updates the coordinates.
-            marker.on('dragend', function(event) {
+            marker.on('dragend', function (event) {
                 const position = event.target.getLatLng();
-
                 updateCoordinates(position.lat, position.lng);
             });
         }
-        
     });
 </script>

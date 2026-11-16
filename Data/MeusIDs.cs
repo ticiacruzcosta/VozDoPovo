@@ -16,20 +16,25 @@ namespace VozDoPovo.Data
 
     public static class ClaimsHelper
     {
-        //public static string? GetUserName(this ClaimsPrincipal user)
-        //{
-        //    return user.Identity?.Name;
-        //}
-
-        //public static string? GetUserRole(this ClaimsPrincipal user)
-        //{
-        //    return user.FindFirst(ClaimTypes.Role)?.Value;
-        //}
-
         public static bool EstaLogado(this ClaimsPrincipal user)
         {
             return user.Identity?.IsAuthenticated ?? false;
         }
-    }
 
+        public static string? ObterNomeUsuario(this ClaimsPrincipal user)
+        {
+            return user.Identity?.Name;
+        }
+
+        public static string ObterCargo(this ClaimsPrincipal user)
+        {
+            return user.FindFirst(ClaimTypes.Role)?.Value ?? "Convidado";
+        }
+
+        public static int ObterIdUsuario(this ClaimsPrincipal user)
+        {
+            var valor = user.FindFirst(ClaimTypes.UserData)?.Value;
+            return int.TryParse(valor, out int id) ? id : 0;
+        }
+    }
 }
